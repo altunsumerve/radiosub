@@ -6,7 +6,8 @@ Point your phone microphone at any radio, scanner, or WebSDR speaker — get liv
 
 🔗 **[Live Demo](https://altunsumerve.github.io/radiosub)**
 
-> **UI design**: Retro CRT terminal / phosphor green aesthetic
+> **UI design**: Modernized retro CRT terminal aesthetic — default light gray theme + dark (#0f0f0f) theme, Open Sans typography, GNOME-style language dropdown
+> **Interface languages**: 11 — Türkçe, English, Deutsch, Español, 中文, Русский, Azərbaycanca, Қазақша, Kurdî, Zazakî, தமிழ்
 
 ---
 
@@ -66,6 +67,10 @@ RadioSub is **not** an end-to-end trained model. It is an orchestrator that wire
 | 🌐 | **Translation** | MyMemory API (primary) + Lingva fallback — free, no API key needed |
 | 🔍 | **Language Detection** | Google Translate unofficial endpoint — fast, reliable, no key required |
 | 📱 | **Mobile First** | Works great on Android Chrome with microphone — point at any speaker |
+| 🌗 | **Theme** | Default light gray mode + dark mode (#0f0f0f) — preference remembered |
+| 🔤 | **Open Sans** | Readability-focused modern typography across the UI + Noto Sans SC / Noto Sans Tamil fallbacks for Chinese & Tamil |
+| 🌍 | **11 UI Languages** | GNOME.org-style dropdown: TR, EN, DE, ES, ZH, RU, AZ, KK, KU (Kurmancî), ZAZA (Zazakî), TA — native names, persisted choice |
+| ✨ | **Modern UI (v1.2)** | Rounded panels with soft shadows, glass header, gradient action button, smooth transitions, accessible focus states |
 | ⚡ | **No Backend** | Pure HTML / CSS / JS — deploys to GitHub Pages for free |
 
 ---
@@ -174,11 +179,21 @@ Being upfront about where this tool struggles:
 |---------|-------------|-------|
 | **Chrome** | ✅ | ✅ |
 | **Edge** | ✅ | ✅ |
+| **Opera** | ✅ | ✅ |
+| Safari (14.1+) | ✅ | ✅ |
 | Firefox | ❌ | ✅ |
-| Safari | ⚠️ | ✅ |
+| Samsung Internet | ✅ | ✅ |
 
-> Speech recognition (Auto + Voice modes) requires Chrome or Edge.
+> Speech recognition (Auto + Voice modes) requires Chromium-based browsers or Safari 14.1+.
 > Morse decoding works in all modern browsers.
+>
+> **v1.1 improvements:** in browsers without speech recognition (e.g. Firefox) the app
+> detects this at startup, shows a clear notice and switches to Morse mode automatically —
+> no more dead-end error messages.
+>
+> **v1.2 improvements:** modernized UI (rounded cards, soft shadows, glass header),
+> 11 interface languages via a GNOME.org-style dropdown, and automatic font fallback
+> for Chinese (Noto Sans SC) and Tamil (Noto Sans Tamil).
 
 > ⚠️ **Do not open via `file://`** — browser won't remember microphone permission.
 > Use `http://localhost` for local testing or deploy to GitHub Pages.
@@ -234,13 +249,14 @@ This tool is intended for **public broadcast monitoring, WebSDR exploration, ham
 radiosub/
 ├── index.html              Single-page app
 ├── css/
-│   └── style.css           Retro CRT phosphor terminal UI
+│   └── style.css           Modernized retro CRT UI + theme system + language dropdown
 ├── js/
+│   ├── compat.js           ES5/legacy polyfills + safeStorage + capability report
 │   ├── app.js              Main controller, auto-detect logic
 │   ├── speech.js           Web Speech API wrapper + VU meter
 │   ├── morse.js            CW decoder (FFT + adaptive timing)
 │   ├── translator.js       Translation + language detection
-│   └── i18n.js             TR/EN internationalization + operator guide
+│   └── i18n.js             11-language internationalization + GNOME-style dropdown + operator guide
 ├── README.md               English documentation
 ├── README_TR.md            Turkish documentation
 ├── LICENSE                 MIT

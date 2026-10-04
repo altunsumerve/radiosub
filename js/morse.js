@@ -39,7 +39,16 @@ class MorseDecoder extends EventTarget {
   }
 
   async start(stream) {
-    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) {
+      this.dispatchEvent(new CustomEvent('error', { detail: { error: 'Web Audio API not supported' } }));
+      return;
+    }
+    this.audioCtx = new AudioCtx();
+    // iOS Safari: context starts 'suspended' until resumed inside a user gesture
+    if (this.audioCtx.state === 'suspended') {
+      try { await this.audioCtx.resume(); } catch (_) {}
+    }
     this.analyser  = this.audioCtx.createAnalyser();
     this.analyser.fftSize = 4096;
     this.analyser.smoothingTimeConstant = 0.4;
@@ -65,10 +74,13 @@ class MorseDecoder extends EventTarget {
     if (this._pollId) { clearInterval(this._pollId); this._pollId = null; }
     clearTimeout(this._letterTimer);
     clearTimeout(this._wordTimer);
+    if (this.source) { try { this.source.disconnect(); } catch (_) {} this.source = null; }
+    if (this.analyser) { try { this.analyser.disconnect(); } catch (_) {} this.analyser = null; }
     if (this.audioCtx) { this.audioCtx.close().catch(() => {}); this.audioCtx = null; }
   }
 
   _peakDb() {
+    if (!this.analyser) return -Infinity;
     const buf = new Float32Array(this.analyser.frequencyBinCount);
     this.analyser.getFloatFrequencyData(buf);
     const binW = this.audioCtx.sampleRate / (2 * buf.length);
@@ -84,6 +96,7 @@ class MorseDecoder extends EventTarget {
   }
 
   _poll() {
+    if (!this.analyser || !this.audioCtx) return;
     const now = performance.now();
     const db  = this._peakDb();
     const thr = this.calibrated ? -46 : -40;

@@ -6,7 +6,8 @@ Telefon mikrofonunu herhangi bir radyo, telsiz veya WebSDR hoparlörüne tut —
 
 🔗 **[Canlı Demo](https://altunsumerve.github.io/radiosub)**
 
-> **Tasarım**: Retro CRT terminal / fosfor yeşili ekran teması
+> **Tasarım**: Modernize edilmiş retro CRT terminal estetiği — varsayılan açık gri tema ve karanlık (#0f0f0f) tema, Open Sans tipografisi, GNOME.org tarzı dil açılır menüsü
+> **Arayüz dilleri**: 11 — Türkçe, English, Deutsch, Español, 中文, Русский, Azərbaycanca, Қазақша, Kurdî, Zazakî, தமிழ்
 
 ---
 
@@ -66,6 +67,10 @@ RadioSub, uçtan uca eğitilmiş bir model **değildir**. Tarayıcı içinde üc
 | 🌐 | **Çeviri** | MyMemory API (birincil) + Lingva (yedek) — ücretsiz, API anahtarı gerekmez |
 | 🔍 | **Dil Tespiti** | Google Translate resmi olmayan endpoint — hızlı, güvenilir, anahtar gerekmez |
 | 📱 | **Mobil Öncelikli** | Android Chrome + mikrofon ile mükemmel çalışır — hoparlöre tut, altyazı gelir |
+| 🌗 | **Tema** | Varsayılan açık gri mod + karanlık mod (#0f0f0f) — tercih hatırlanır |
+| 🔤 | **Open Sans** | Tüm arayüzde okunabilirlik odaklı modern tipografi + Çince/Tamilce için Noto Sans SC / Noto Sans Tamil yedekleri |
+| 🌍 | **11 Arayüz Dili** | GNOME.org tarzı açılır menü: TR, EN, DE, ES, ZH, RU, AZ, KK, KU (Kurmancî), ZAZA (Zazakî), TA — ana dili adlarıyla, tercih kalıcı |
+| ✨ | **Modern UI (v1.2)** | Yumuşak gölgeli yuvarlatılmış kartlar, cam efektli başlık, gradyan aksiyon butonu, akıcı geçişler, erişilebilir odak durumları |
 | ⚡ | **Backend Yok** | Saf HTML / CSS / JS — GitHub Pages'te ücretsiz yayınlanır |
 
 ---
@@ -174,11 +179,21 @@ Bu aracın zorlandığı durumlar konusunda dürüst olmak gerek:
 |----------|---------------|------|
 | **Chrome** | ✅ | ✅ |
 | **Edge** | ✅ | ✅ |
+| **Opera** | ✅ | ✅ |
+| Safari (14.1+) | ✅ | ✅ |
 | Firefox | ❌ | ✅ |
-| Safari | ⚠️ | ✅ |
+| Samsung Internet | ✅ | ✅ |
 
-> Ses tanıma (Otomatik + Ses modları) Chrome veya Edge gerektirir.
+> Ses tanıma (Otomatik + Ses modları) Chromium tabanlı tarayıcılar ve Safari 14.1+ gerektirir.
 > Mors çözme tüm modern tarayıcılarda çalışır.
+>
+> **v1.1 iyileştirmeleri:** Firefox gibi ses tanıma desteklemeyen tarayıcılarda uygulama
+> bunu başlangıçta tespit eder, uyarı gösterir ve otomatik olarak Mors moduna geçer —
+> kullanıcı artık boş hata mesajlarıyla karşılaşmaz.
+>
+> **v1.2 iyileştirmeleri:** modernize UI (yuvarlatılmış kartlar, yumuşak gölgeler, cam başlık),
+> GNOME.org tarzı açılır menüyle 11 arayüz dili ve Çince (Noto Sans SC) ile Tamilce
+> (Noto Sans Tamil) için otomatik font yedeği.
 
 > ⚠️ **`file://` ile açma** — tarayıcı mikrofon iznini hatırlamaz, her açılışta sorar.
 > Lokal test için `http://localhost` kullan veya GitHub Pages'e deploy et.
@@ -234,13 +249,14 @@ Bu araç **kamu yayınlarını izleme, WebSDR keşfi, amatör radyo eğitim kull
 radiosub/
 ├── index.html              Tek sayfalı uygulama
 ├── css/
-│   └── style.css           Retro CRT fosfor terminal arayüzü
+│   └── style.css           Modernize edilmiş retro CRT arayüzü + tema sistemi + dil menüsü
 ├── js/
+│   ├── compat.js           ES5/legacy polyfill'ler + safeStorage + yetenek raporu
 │   ├── app.js              Ana kontrolcü, otomatik algılama mantığı
 │   ├── speech.js           Web Speech API sarmalayıcısı + VU metre
 │   ├── morse.js            CW çözücü (FFT + adaptif zamanlama)
 │   ├── translator.js       Çeviri + dil tespiti servisi
-│   └── i18n.js             TR/EN dil desteği + operatör kılavuzu
+│   └── i18n.js             11 dil desteği + GNOME tarzı açılır menü + operatör kılavuzu
 ├── README.md               İngilizce dokümantasyon
 ├── README_TR.md            Türkçe dokümantasyon
 ├── LICENSE                 MIT

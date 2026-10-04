@@ -1,12 +1,34 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="tr" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RADIOSUB-1 // Gerçek Zamanlı Radyo Altyazı ve Çevirisi</title>
-  <meta name="description" content="WebSDR, amatör radyo için ücretsiz gerçek zamanlı altyazı ve çeviri. Ses ve Mors kodu CW desteği.">
-  <meta name="theme-color" content="#0e0e0e">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>RADIOSUB-1 // Gerçek Zamanlı Radyo Altyazı ve Çevirisi — 11 Dil</title>
+  <meta name="description" content="WebSDR, amatör radyo için ücretsiz gerçek zamanlı altyazı ve çeviri. 11 arayüz dili, ses ve Mors kodu CW desteği.">
+  <meta name="theme-color" content="#e4e5e6" id="metaThemeColor">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📻</text></svg>">
+
+  <!-- Theme bootstrap: runs BEFORE CSS paint to avoid flash of wrong theme.
+       Default = light gray mode; persisted choice wins. -->
+  <script>
+  (function () {
+    var theme = 'light';
+    try {
+      var saved = localStorage.getItem('radiosub-theme');
+      if (saved === 'dark' || saved === 'light') theme = saved;
+    } catch (e) { /* storage unavailable (private mode / file://) — keep default */ }
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+  </script>
+
+  <!-- Open Sans (Latin/Cyrillic/Greek) + Noto Sans SC (Çince) + Noto Sans Tamil (Tamilce)
+       — Noto aileleri unicode-range alt kümeleriyle gelir; yalnızca Çince/Tamilce
+       karakterler render edilirse indirilir, diğer dillerde performans etkisi yok. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;700&family=Noto+Sans+Tamil:wght@400;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -15,13 +37,21 @@
 <header>
   <div class="header-inner">
     <div class="device-name">
-      RADIOSUB<span>// v1.0</span>
+      RADIOSUB<span>// v1.2</span>
     </div>
     <div class="header-meta">
       <span id="clockDisplay">00:00:00</span>
-      <div class="lang-toggle">
-        <button class="lang-btn" data-lang-btn="tr">TR</button>
-        <button class="lang-btn" data-lang-btn="en">EN</button>
+      <button class="theme-btn" id="themeToggle" type="button" aria-label="Tema değiştir" data-i18n-aria="theme-aria">
+        <span class="theme-icon" id="themeIcon">☀</span>
+        <span class="theme-text" id="themeText" data-i18n="theme-label-light">AÇIK</span>
+      </button>
+      <div class="lang-dropdown" id="langDropdown">
+        <button class="lang-dd-btn" id="langDdBtn" type="button" aria-haspopup="listbox" aria-expanded="false" data-i18n-aria="lang-dd-aria">
+          <svg class="lang-globe" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span id="langDdLabel">Türkçe</span>
+          <span class="lang-caret" aria-hidden="true">▾</span>
+        </button>
+        <ul class="lang-dd-menu" id="langDdMenu" role="listbox" hidden></ul>
       </div>
       <a class="header-link" href="https://github.com/altunsumerve/radiosub" target="_blank" rel="noopener">[ GITHUB ]</a>
     </div>
@@ -30,6 +60,12 @@
 
 <!-- ════════════════ MAIN ════════════════ -->
 <main>
+
+  <!-- ── BROWSER SUPPORT NOTICE (hidden unless needed) ── -->
+  <div class="browser-notice" id="browserNotice" hidden>
+    <span class="bn-icon">⚠</span>
+    <span id="browserNoticeText"></span>
+  </div>
 
   <!-- ── CONTROLS PANEL ── -->
   <div class="panel controls-panel">
@@ -41,9 +77,9 @@
         <div>
           <div class="ctrl-label" data-i18n="mode-select">// MOD SEÇ</div>
           <div class="toggle-group">
-            <button class="toggle-btn active" data-mode="auto" data-i18n="btn-mode-auto">⬡ OTO</button>
-            <button class="toggle-btn" data-mode="speech" data-i18n="btn-mode-speech">▶ SES</button>
-            <button class="toggle-btn" data-mode="morse" data-i18n="btn-mode-morse">·-· MORS</button>
+            <button class="toggle-btn" data-mode="auto" data-i18n="btn-mode-auto" type="button">⬡ OTO</button>
+            <button class="toggle-btn" data-mode="speech" data-i18n="btn-mode-speech" type="button">▶ SES</button>
+            <button class="toggle-btn" data-mode="morse" data-i18n="btn-mode-morse" type="button">·-· MORS</button>
           </div>
         </div>
       </div>
@@ -71,7 +107,7 @@
             <option value="uk-UA">UK — Українська</option>
           </select>
         </div>
-        <div class="lang-arrow">→</div>
+        <div class="lang-arrow" aria-hidden="true">→</div>
         <div class="lang-group">
           <div class="ctrl-label" data-i18n="target-lang-label">// HEDEF DİL</div>
           <select id="targetLang">
@@ -99,14 +135,14 @@
         <span data-i18n="scan-window">TARAMA</span>
         <span id="autoCountdown" class="blink">--</span>
         <span data-i18n="sec">SN</span>
-        <span style="color:#1a3a1a">|</span>
+        <span class="info-sep">|</span>
         <span data-i18n="detected-label">ALGILANDI:</span>
         <span id="detectedLangDisplay">---</span>
       </div>
 
       <!-- TX Button -->
-      <button class="tx-btn" id="mainBtn">
-        <span>▶</span>
+      <button class="tx-btn" id="mainBtn" type="button">
+        <span aria-hidden="true">▶</span>
         <span class="btn-text">BAŞLAT</span>
       </button>
 
@@ -116,10 +152,10 @@
   <!-- ── STATUS BAR ── -->
   <div class="status-bar">
     <span class="status-code" id="statusCode">[HAZ]</span>
-    <span class="status-msg"  id="statusMsg">RADIOSUB v1.0 — HAZIR</span>
+    <span class="status-msg"  id="statusMsg">RADIOSUB v1.2 — HAZIR</span>
     <div class="vu-wrap">
       <span class="vu-label" data-i18n="vu-label">SİN</span>
-      <div class="vu-meter" id="vuMeter">
+      <div class="vu-meter" id="vuMeter" aria-hidden="true">
         <div class="vu-seg"></div><div class="vu-seg"></div>
         <div class="vu-seg"></div><div class="vu-seg"></div>
         <div class="vu-seg"></div><div class="vu-seg"></div>
@@ -141,7 +177,7 @@
   <div class="panel screen-panel">
     <div class="screen-header">
       <span class="screen-title" data-i18n="rx-title">// ALIM TRANSKRİPTİ</span>
-      <button class="copy-btn" id="copyTranscript" data-i18n="copy">[ KOPYALA ]</button>
+      <button class="copy-btn" id="copyTranscript" data-i18n="copy" type="button">[ KOPYALA ]</button>
     </div>
     <div class="crt-screen" id="subtitleBox">
       <span class="ph-text">// SİNYAL BEKLENİYOR_</span>
@@ -153,7 +189,7 @@
     <div class="screen-header">
       <span class="screen-title" data-i18n="trans-title">// ÇEVİRİ</span>
       <span class="api-indicator" id="apiIndicator"></span>
-      <button class="copy-btn" id="copyTranslation" data-i18n="copy">[ KOPYALA ]</button>
+      <button class="copy-btn" id="copyTranslation" data-i18n="copy" type="button">[ KOPYALA ]</button>
     </div>
     <div class="crt-screen" id="translationBox">
       <span class="ph-text">// ÇEVİRİ TAMPONU BOŞ_</span>
@@ -164,7 +200,7 @@
   <div class="panel history-panel">
     <div class="history-header">
       <span class="history-title" data-i18n="history-title">// OTURUM KAYDI</span>
-      <button class="clear-btn" id="clearHistory" data-i18n="clr">[ TEMİZLE ]</button>
+      <button class="clear-btn" id="clearHistory" data-i18n="clr" type="button">[ TEMİZLE ]</button>
     </div>
     <div class="history-box" id="historyBox">
       <span class="ph">// OTURUM KAYDI BOŞ</span>
@@ -176,10 +212,10 @@
     <div class="panel-label" data-i18n="manual-title">// OPERATÖR KILAVUZU</div>
 
     <div class="guide-tabs">
-      <button class="guide-tab active" data-tab="auto" data-i18n="tab-auto">OTO MOD</button>
-      <button class="guide-tab" data-tab="websdr" data-i18n="tab-websdr">WEBSDR</button>
-      <button class="guide-tab" data-tab="radio" data-i18n="tab-radio">AMATÖR RADYO</button>
-      <button class="guide-tab" data-tab="morse" data-i18n="tab-morse">MORS CW</button>
+      <button class="guide-tab active" data-tab="auto" data-i18n="tab-auto" type="button">OTO MOD</button>
+      <button class="guide-tab" data-tab="websdr" data-i18n="tab-websdr" type="button">WEBSDR</button>
+      <button class="guide-tab" data-tab="radio" data-i18n="tab-radio" type="button">AMATÖR RADYO</button>
+      <button class="guide-tab" data-tab="morse" data-i18n="tab-morse" type="button">MORS CW</button>
     </div>
 
     <div id="guideContent">
@@ -198,6 +234,7 @@
   <p><a href="https://github.com/altunsumerve/radiosub" target="_blank" rel="noopener">GITHUB.COM/ALTUNSUMERVE/RADIOSUB</a> // <span data-i18n="footer-2-short">SUNUCU YOK // %100 ÜCRETSİZ</span></p>
 </footer>
 
+<script src="js/compat.js"></script>
 <script src="js/i18n.js"></script>
 <script src="js/translator.js"></script>
 <script src="js/morse.js"></script>

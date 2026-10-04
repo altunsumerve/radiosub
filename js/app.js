@@ -32,16 +32,72 @@ class RadioSubApp {
     this._autoCheckTimer  = null;
     this._cycleTimer      = null;
 
+    this._initTheme();
     this._initUI();
+  }
+
+  /* ════════════════════════════════════════
+     THEME — light (default) / dark (#0f0f0f)
+  ════════════════════════════════════════ */
+  _initTheme() {
+    const btn   = document.getElementById('themeToggle');
+    const icon  = document.getElementById('themeIcon');
+    const label = document.getElementById('themeText');
+    const meta  = document.getElementById('metaThemeColor');
+
+    const apply = (theme) => {
+      document.documentElement.setAttribute('data-theme', theme);
+      try { window.safeStorage.setItem('radiosub-theme', theme); } catch (e) {}
+      if (meta) meta.setAttribute('content', theme === 'dark' ? '#0f0f0f' : '#e4e5e6');
+      if (icon)  icon.textContent  = theme === 'dark' ? '🌙' : '☀';
+      if (label) label.textContent = t(theme === 'dark' ? 'theme-label-dark' : 'theme-label-light');
+    };
+
+    // Sync with the head bootstrap (default = light)
+    const current = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    apply(current);
+
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        apply(next);
+      });
+    }
   }
 
   /* ════════════════════════════════════════
      UI WIRING
   ════════════════════════════════════════ */
   _initUI() {
+    // ── Browser support UX: if speech recognition is missing
+    //    (e.g. Firefox), steer the user to Morse mode up front.
+    if (!this.speech.supported) {
+      this.mode = 'morse';
+      document.querySelectorAll('.toggle-btn[data-mode]').forEach(b => {
+        if (b.dataset.mode !== 'morse') b.classList.add('unsupported');
+      });
+      document.querySelectorAll('.toggle-btn[data-mode="morse"]').forEach(b =>
+        b.classList.add('active')
+      );
+      const notice = document.getElementById('browserNotice');
+      const noticeText = document.getElementById('browserNoticeText');
+      if (notice && noticeText) {
+        noticeText.textContent = t('browser-notice');
+        notice.hidden = false;
+      }
+    } else if (!window.RadioSubCompat || !window.RadioSubCompat.secure) {
+      const notice = document.getElementById('browserNotice');
+      const noticeText = document.getElementById('browserNoticeText');
+      if (notice && noticeText) {
+        noticeText.textContent = t('msg-insecure');
+        notice.hidden = false;
+      }
+    }
+
     // ── Mode buttons (class=toggle-btn, data-mode=...) ──
     document.querySelectorAll('.toggle-btn[data-mode]').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (btn.classList.contains('unsupported')) return;
         if (this.isRunning) return; // don't change mode while running
         document.querySelectorAll('.toggle-btn[data-mode]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -55,26 +111,28 @@ class RadioSubApp {
       this.isRunning ? this.stop() : this.start();
     });
 
-    // ── Copy buttons ──
+    // ── Copy buttons (with legacy clipboard fallback) ──
     document.getElementById('copyTranscript').addEventListener('click', () => {
-      navigator.clipboard.writeText(this.transcript).catch(() => {});
-      this._flash('copyTranscript', '[ OK ]');
+      window.copyTextToClipboard(this.transcript).then(ok =>
+        this._flash('copyTranscript', ok ? t('copy-ok') : t('copy-fail'))
+      );
     });
     document.getElementById('copyTranslation').addEventListener('click', () => {
-      navigator.clipboard.writeText(this.translation).catch(() => {});
-      this._flash('copyTranslation', '[ OK ]');
+      window.copyTextToClipboard(this.translation).then(ok =>
+        this._flash('copyTranslation', ok ? t('copy-ok') : t('copy-fail'))
+      );
     });
 
     // ── Clear history ──
     document.getElementById('clearHistory').addEventListener('click', () => {
       document.getElementById('historyBox').innerHTML =
-        '<span class="ph">// SESSION LOG EMPTY</span>';
+        `<span class="ph">${t('history-empty')}</span>`;
     });
 
     // ── Guide tabs — only match inner panes (those with data-tab) ──
     document.querySelectorAll('.guide-tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        document.querySelectorAll('.guide-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.guide-tab').forEach(x => x.classList.remove('active'));
         tab.classList.add('active');
         document.querySelectorAll('.guide-tab-content[data-tab]').forEach(pane => {
           pane.style.display = pane.dataset.tab === tab.dataset.tab ? 'block' : 'none';
@@ -88,6 +146,11 @@ class RadioSubApp {
     this.speech.addEventListener('level',   e => this._updateVU(e.detail));
     this.speech.addEventListener('error',   e => {
       if (e.detail.error === 'network') return; // transient, ignore
+      if (e.detail.error === 'not-allowed') {
+        this.stop();
+        this._setStatus('ERR', t('msg-mic-denied'));
+        return;
+      }
       this._setStatus('ERR', t('msg-speech-err', e.detail.error.toUpperCase()));
     });
 
@@ -96,6 +159,9 @@ class RadioSubApp {
     this.morse.addEventListener('letter',     e => this._onMorseLetter(e.detail));
     this.morse.addEventListener('word',       e => this._onMorseWord(e.detail));
     this.morse.addEventListener('calibrated', e => this._onCalibrated(e.detail));
+    this.morse.addEventListener('error',      e => {
+      this._setStatus('ERR', t('msg-speech-err', e.detail.error.toUpperCase()));
+    });
     this.morse.addEventListener('element',    e => {
       document.getElementById('morseRaw').textContent = e.detail.seq || '';
     });
@@ -138,6 +204,10 @@ class RadioSubApp {
     // Speech/Auto: Web Speech API manages its own mic internally.
     const needsStream = this.mode === 'morse';
     if (needsStream) {
+      if (!window.RadioSubCompat || !window.RadioSubCompat.mediaDevices) {
+        this._setStatus('ERR', t('msg-audio-err', 'NOT SUPPORTED'));
+        return;
+      }
       try {
         this.stream = await this._getStream();
       } catch (err) {
@@ -187,7 +257,7 @@ class RadioSubApp {
     this.morse.stop();
 
     if (this.stream) {
-      this.stream.getTracks().forEach(t => t.stop());
+      this.stream.getTracks().forEach(track => track.stop());
       this.stream = null;
     }
 
@@ -205,13 +275,9 @@ class RadioSubApp {
 
   /* ════════════════════════════════════════
      AUTO MODE — language detection
-     Problem: Web Speech API lang='' defaults
-     to OS language (e.g. Turkish) so it won't
-     transcribe foreign audio.
-     Solution: cycle through top 6 languages
-     in 5s windows (6×5s = 30s total).
-     Detection: Google Translate unofficial API
-     (translate.googleapis.com, no key, CORS ok).
+     Cycles through 7 languages in 5s windows
+     (35s total), votes on Google-detected
+     language after each final transcript.
   ════════════════════════════════════════ */
   _startAutoMode() {
     const LANGS = [
@@ -309,7 +375,8 @@ class RadioSubApp {
     clearTimeout(this._autoCheckTimer);
 
     const name = LANG_NAMES[result.lang] || result.lang.toUpperCase();
-    const votes = this._langVotes[result.lang]?.count || 1;
+    const voteEntry = this._langVotes[result.lang];
+    const votes = (voteEntry && voteEntry.count) || 1;
 
     document.getElementById('autoCountdown').textContent = '✓';
     document.getElementById('detectedLangDisplay').textContent =
@@ -341,7 +408,8 @@ class RadioSubApp {
 
     if (this.mode === 'speech') {
       // Manual mode: always translate
-      this._doTranslate(text, this._short(document.getElementById('sourceLang').value));
+      const src = document.getElementById('sourceLang').value;
+      this._doTranslate(text, this._short(src));
     } else if (this.mode === 'auto' && this._langLocked) {
       // Auto mode: only translate after language is confirmed
       this._doTranslate(text, this._detectedLang);
@@ -362,22 +430,22 @@ class RadioSubApp {
     this._setStatus('RX', t('msg-cw-active'));
   }
 
-  _onMorseLetter({ char }) {
-    this.morseBuffer += char;
+  _onMorseLetter(detail) {
+    this.morseBuffer += detail.char;
     this.transcript   = this.morseBuffer;
     this._renderSubtitle(this.morseBuffer, false);
     // No translation in Morse mode
   }
 
-  _onMorseWord({ word }) {
+  _onMorseWord(detail) {
     this.morseBuffer += ' ';
     this.transcript   = this.morseBuffer;
     this._renderSubtitle(this.morseBuffer, false);
   }
 
-  _onCalibrated({ wpm }) {
-    document.getElementById('wpmDisplay').textContent = `${wpm} WPM`;
-    this._setStatus('RX', t('msg-cw-locked', wpm));
+  _onCalibrated(detail) {
+    document.getElementById('wpmDisplay').textContent = `${detail.wpm} WPM`;
+    this._setStatus('RX', t('msg-cw-locked', detail.wpm));
   }
 
   /* ════════════════════════════════════════
@@ -431,14 +499,14 @@ class RadioSubApp {
 
     const item = document.createElement('div');
     item.className = 'history-item';
-    const t       = new Date().toLocaleTimeString('en-GB', { hour12: false });
+    const now   = new Date().toLocaleTimeString('en-GB', { hour12: false });
     const modeTag = this.mode.toUpperCase();
     const langTag = this._detectedLang
       ? ` [${(LANG_NAMES[this._detectedLang] || this._detectedLang).toUpperCase()}]`
       : '';
 
     item.innerHTML =
-      `<div class="hi-time">[${t}] [${modeTag}]${langTag}</div>` +
+      `<div class="hi-time">[${now}] [${modeTag}]${langTag}</div>` +
       `<div class="hi-orig">&gt; ${this._esc(this.transcript)}</div>` +
       (this.translation
         ? `<div class="hi-trans">  ${this._esc(this.translation)}</div>`

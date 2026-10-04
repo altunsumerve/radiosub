@@ -7,7 +7,7 @@ class Translator {
         name: 'MyMemory',
         call: async (text, from, to) => {
           const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${from}|${to}`;
-          const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+          const r = await window.fetchWithTimeout(url, null, 6000);
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           const d = await r.json();
           if (d.responseStatus !== 200) throw new Error(d.responseMessage || 'Failed');
@@ -18,7 +18,7 @@ class Translator {
         name: 'Lingva',
         call: async (text, from, to) => {
           const url = `https://lingva.garudalinux.org/api/v1/${from}/${to}/${encodeURIComponent(text)}`;
-          const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+          const r = await window.fetchWithTimeout(url, null, 6000);
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           const d = await r.json();
           if (!d.translation) throw new Error('No translation');
@@ -29,7 +29,7 @@ class Translator {
         name: 'Lingva-2',
         call: async (text, from, to) => {
           const url = `https://translate.plausibility.cloud/api/v1/${from}/${to}/${encodeURIComponent(text)}`;
-          const r = await fetch(url, { signal: AbortSignal.timeout(6000) });
+          const r = await window.fetchWithTimeout(url, null, 6000);
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           const d = await r.json();
           if (!d.translation) throw new Error('No translation');
@@ -43,8 +43,9 @@ class Translator {
   _short(lang) { return lang.split('-')[0].toLowerCase(); }
 
   /* ─── Language Detection ───────────────────────────────────
-     Primary:  Google Translate unofficial endpoint (no key, CORS open, very reliable)
-     Fallback: LibreTranslate community instances
+     Primary:  Google Translate unofficial endpoint (no key, CORS open)
+     Fallback: Lingva auto-source translate — info.detectedSource
+     (replaces defunct LibreTranslate community instances)
   ──────────────────────────────────────────────────────────── */
   async detectLanguage(text) {
     if (!text || text.trim().length < 6) return null;
@@ -55,7 +56,7 @@ class Translator {
     try {
       const url = 'https://translate.googleapis.com/translate_a/single' +
         `?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(q)}`;
-      const r = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      const r = await window.fetchWithTimeout(url, null, 5000);
       if (r.ok) {
         const d = await r.json();
         const code = d && d[2];
@@ -67,23 +68,19 @@ class Translator {
       console.warn('[detect] Google Translate:', e.message);
     }
 
-    // ── Fallback: LibreTranslate community instances ──
-    for (const ep of [
-      'https://translate.argosopentech.com/detect',
-      'https://libretranslate.de/detect'
+    // ── Fallback: Lingva (auto source → read detectedSource) ──
+    for (const base of [
+      'https://lingva.garudalinux.org',
+      'https://translate.plausibility.cloud'
     ]) {
       try {
-        const r = await fetch(ep, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q }),
-          signal: AbortSignal.timeout(4000)
-        });
+        const url = `${base}/api/v1/auto/en/${encodeURIComponent(q)}`;
+        const r = await window.fetchWithTimeout(url, null, 5000);
         if (!r.ok) continue;
-        const data = await r.json();
-        const best = Array.isArray(data) && data[0];
-        if (best && best.confidence > 0.4) {
-          return { lang: best.language, confidence: best.confidence };
+        const d = await r.json();
+        const src = d && d.info && d.info.detectedSource;
+        if (typeof src === 'string' && src.length >= 2 && src !== 'auto') {
+          return { lang: src.slice(0, 2).toLowerCase(), confidence: 0.75 };
         }
       } catch (_) {}
     }
